@@ -1,4 +1,4 @@
-** Remember **
+**Remember**
 
 - create table in the supabase
 - to store data use supabase select query
