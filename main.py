@@ -27,6 +27,7 @@ supabase: Client = create_client(url, key)
 async def root()->Dict[str,str]:
     return {"status":"ok"}
 
+# testing users here with get request --------------- initial testing apis if connected with supabase or not
 @app.get("/users")
 def allUsers_route():
     try:
@@ -51,7 +52,7 @@ def createUser(user:UsersSchema):
         "email":user.email
     }).execute()
     return user
-
+# ------------------------------------------
 
 @app.post("/auth/signup", tags=["auth"], summary="Register a new user")
 async def signup_route(user_data: apps.supabase.UserSignup):
@@ -65,6 +66,7 @@ async def signin_route(user_credentials: apps.supabase.UserSignIn):
 async def signout_route(current_user= Depends(apps.supabase.get_current_user)):
     return await apps.supabase.signout(current_user)
 
+# testing token if exists
 @app.get("/auth/test-auth", tags=["auth"], summary="Test authentication")
 async def test_auth(current_user = Depends(apps.supabase.get_current_user)):
     return {"message": "Authentication successful", "user": current_user.user.email}
