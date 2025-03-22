@@ -66,7 +66,22 @@ async def signin_route(user_credentials: apps.supabase.UserSignIn):
 async def signout_route(current_user= Depends(apps.supabase.get_current_user)):
     return await apps.supabase.signout(current_user)
 
+@app.get("/auth/me", tags=["auth"], summary="get current user")
+def getLoggedInUser(current_user=Depends(apps.supabase.get_current_user)):
+    return{
+        "token": current_user
+    }
+
 # testing token if exists
 @app.get("/auth/test-auth", tags=["auth"], summary="Test authentication")
 async def test_auth(current_user = Depends(apps.supabase.get_current_user)):
     return {"message": "Authentication successful", "user": current_user.user.email}
+
+@app.post("/auth/reset-password", tags=["auth"], summary="request password reset")
+async def request_reset_route(reset_req: apps.supabase.PasswordResetRequest):
+    return await apps.supabase.request_password_reset(reset_req)
+
+@app.post("/auth/reset-confirm", tags=["auth"], summary="confirm password reset")
+async def confirm_reset_route(reset_data: apps.supabase.PasswordResetConfirm):
+    return await apps.supabase.confirm_password_rest(reset_data)
+

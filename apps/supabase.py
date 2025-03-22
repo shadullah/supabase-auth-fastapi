@@ -56,13 +56,13 @@ async def signup(user_data: UserSignup):
             "password":user_data.password
         })
 
-        if auth_response.user:
-            user_id=random.randint(0,1000000)
+        # if auth_response.user:
+        #     user_id=random.randint(0,1000000)
             
-            client.table("users").insert({
-                "id": user_id,
-                "email":user_data.email
-            }).execute()
+        #     client.table("users").insert({
+        #         "id": user_id,
+        #         "email":user_data.email
+        #     }).execute()
 
         if auth_response.user and not auth_response.session:
             return {
@@ -96,15 +96,8 @@ async def signin(user_credentials: UserSignIn):
             "password":user_credentials.password,
         })
 
-        user_data = supabase.table("users").select("*").eq("email", user_credentials.email).single().execute()
-        print(user_data.data["id"])
-
-        if not user_data:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User data not found")
-
         return {
-            "id":user_data.data["id"],
-            "email":user_data.data["email"],
+            "email":user_credentials.email,
             "access_token": auth_response.session.access_token,
             "token_type":"bearer"
         }
@@ -122,4 +115,43 @@ async def signout(current_user):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Logout failed: {str(e)}"
+        )
+    
+class PasswordResetRequest(BaseModel):
+    email:EmailStr
+
+class PasswordResetConfirm(BaseModel):
+    token:str 
+    password:str 
+    confirm_password:str 
+
+async def request_password_reset(reset_req: PasswordResetRequest):
+    client = get_supabase()
+    try:
+        response = client.auth.reset_password_email(reset_req.email)
+        print(response)
+        return {"message": "If your email is registered, then check your email inbox"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Email sending error: {str(e)}"
+        )
+    
+async def confirm_password_rest(reset_data: PasswordResetConfirm):
+    client=get_supabase()
+    if reset_data.password != reset_data.confirm_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password don't match")
+    try:
+        client.auth.set_session(reset_data.token,reset_data.token)
+        response = client.auth.update_user(
+            {
+                "password": reset_data.password
+            }
+        )
+        print(response)
+        return {
+            "message":"Password reset successful"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"password reset error: {str(e)}"
         )
