@@ -3,9 +3,13 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-from fastapi import FastAPI,Depends,status
+from fastapi import FastAPI,Depends,status,BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import apps.supabase
+from sib_api_v3_sdk import Configuration, ApiClient
+import sib_api_v3_sdk
+from sib_api_v3_sdk.api.transactional_emails_api import TransactionalEmailsApi
+from sib_api_v3_sdk.models import SendSmtpEmail,SendSmtpEmailTo
 
 # project root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +61,33 @@ def createUser(user:UsersSchema):
 @app.post("/auth/signup", tags=["auth"], summary="Register a new user")
 async def signup_route(user_data: apps.supabase.UserSignup):
     return await apps.supabase.signup(user_data)
+
+configuration = Configuration()
+configuration.api_key['api-key']= os.environ.get("BREVO_KEY")
+
+api_client = ApiClient(configuration)
+api_instance = TransactionalEmailsApi(api_client)
+
+class EmailSchema(BaseModel):
+    email:str 
+
+@app.post("/send-email")
+async def send_email(email:EmailSchema,background_tasks: BackgroundTasks):
+    def send():
+        email_data = SendSmtpEmail(
+            to=[SendSmtpEmailTo(email=email.email)],
+            subject="Test Email from FastAPI",
+            html_content="<html><body><h1>This is a test email from FastAPI using Brevo!</h1></body></html>",
+            sender={"email": "hexaalif2020@gmail.com"}
+        )
+        api_instance.send_transac_email(email_data)
+    
+    background_tasks.add_task(send)
+    return {"message": "Email sent via Brevo"}
+
+
+
+
 
 @app.post("/auth/signin", tags=["auth"], summary="login a user")
 async def signin_route(user_credentials: apps.supabase.UserSignIn):
